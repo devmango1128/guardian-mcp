@@ -1,6 +1,4 @@
 # guardian-mcp
-
-<!-- GitHub에 올린 뒤 devmango1128/guardian-mcp 부분을 실제 repo 경로로 확인해주세요 -->
 [![CI](https://github.com/devmango1128/guardian-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/devmango1128/guardian-mcp/actions/workflows/ci.yml)
 
 AI 코딩 에이전트(Claude Code, Claude Desktop, Cursor 등)가 **목표를 달성하려다 저지르는 파괴적인 실수**를 막는 MCP 서버입니다.
