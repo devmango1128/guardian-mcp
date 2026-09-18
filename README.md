@@ -7,6 +7,10 @@ Guardian MCP는 **AI 코딩 에이전트가 저지르는 흔한 파괴적 실수
 
 > "컴퓨터 용량 좀 줄여줘" 같은 평범한 요청도, 에이전트가 그 목표를 달성하는 과정에서 `/Applications`를 통째로 지우거나 시스템 드라이브를 건드리는 식으로 이어질 수 있습니다. 권한이 있어도 일어나는 사고입니다. Guardian MCP는 삭제/덮어쓰기/특정 셸 명령을 실행하기 **직전에** 가로채 검사합니다.
 
+## 현재 상태
+
+개인 프로젝트, v0.2.0, 아직 npm에 publish 전입니다. MCP 프로토콜 레벨 통신(initialize/tools list/tools call)은 직접 검증했지만, **실제 Claude Code/Desktop 같은 클라이언트에서 에이전트가 상시 사용하는 걸 검증한 적은 아직 없습니다.** 외부 보안 감사도 받지 않았고, 아래 위협 모델도 저자 본인의 분석과 테스트를 기반으로 작성된 것입니다. 프로덕션의 유일한 안전장치로 쓰지 말고, 여러 방어선 중 하나로 여겨주세요.
+
 ## Guardian MCP가 아닌 것
 
 과장하지 않기 위해 먼저 명확히 합니다.
@@ -37,17 +41,44 @@ Guardian MCP는 **AI 코딩 에이전트가 저지르는 흔한 파괴적 실수
 - **`restore_trash`** — id로 원래 경로에 복구 (원래 자리에 이미 뭔가 있으면 거부)
 - **`purge_trash`** — 진짜로 영구 삭제. **아무 기준 없이 호출하면 아무것도 지우지 않습니다** (ids 또는 olderThanDays를 반드시 명시). 먼저 `dryRun:true`로 미리보기하세요. 한 번에 20개 넘게 지우려면 `confirm:true` 필요.
 
-⚠️ **trash는 자동으로 비워지지 않습니다.** 디스크 용량을 계속 차지하니, 주기적으로 `purge_trash`를 직접 호출해 정리해주세요.
+**주의: trash는 자동으로 비워지지 않습니다.** 디스크 용량을 계속 차지하니, 주기적으로 `purge_trash`를 직접 호출해 정리해주세요.
 
 ## 설치
 
-별도 설치 없이 `npx`로 바로 실행할 수 있습니다. (npm 패키지명은 `safe-agent-mcp`이며, 이 GitHub 저장소 이름 `guardian-mcp`와는 다릅니다.)
+> **아직 npm에 publish되지 않았습니다.** 아래 `npx -y safe-agent-mcp`는 publish 이후에나 동작합니다. 그 전까지는 이 저장소를 클론해서 로컬 빌드로 등록해 쓰세요 (바로 아래 "로컬에서 등록하기" 참고).
+
+publish 이후에는 별도 설치 없이 `npx`로 바로 실행할 수 있습니다. (npm 패키지명은 `safe-agent-mcp`이며, 이 GitHub 저장소 이름 `guardian-mcp`와는 다릅니다.)
 
 ```bash
 npx -y safe-agent-mcp
 ```
 
 ## 사용 방법
+
+### 로컬에서 등록하기 (아직 publish 전)
+
+```bash
+git clone https://github.com/devmango1128/guardian-mcp.git
+cd guardian-mcp
+npm install
+npm run build
+```
+
+그 다음 `command`/`args`를 `npx` 대신 로컬 빌드 경로로 지정하면 됩니다:
+
+```json
+{
+  "mcpServers": {
+    "guardian": {
+      "command": "node",
+      "args": ["/absolute/path/to/guardian-mcp/dist/index.js"],
+      "env": {
+        "GUARDIAN_PROTECTED_PATHS": "/Users/me/Documents/important-project,/Users/me/Desktop"
+      }
+    }
+  }
+}
+```
 
 ### 어떤 MCP 클라이언트에서든 등록하기
 
@@ -61,7 +92,7 @@ Guardian MCP는 표준 MCP stdio 서버입니다. `mcpServers` 설정 형식은 
 | Windsurf | `~/.codeium/windsurf/mcp_config.json` |
 | Cline (VS Code) | VS Code settings의 `cline.mcpServers` 또는 `cline_mcp_settings.json` |
 
-정확한 파일 위치는 계속 바뀔 수 있으니, 사용 중인 클라이언트의 최신 MCP 설정 문서를 확인하세요. 내용은 어디서든 동일합니다:
+정확한 파일 위치는 계속 바뀔 수 있으니, 사용 중인 클라이언트의 최신 MCP 설정 문서를 확인하세요. **publish 이후에는** 내용이 어디서든 아래처럼 동일해집니다 (그 전까지는 위 로컬 등록 방식을 쓰세요):
 
 ```json
 {

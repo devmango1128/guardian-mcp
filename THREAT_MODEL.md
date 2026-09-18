@@ -2,6 +2,8 @@
 
 Guardian MCP provides a recoverable safety layer designed to reduce common catastrophic mistakes made by AI coding agents. It is not a sandbox, and it does not assume an adversarial local user.
 
+This document reflects the author's own analysis and testing (automated tests plus one internal adversarial review pass, not an independent security audit). Treat it as a starting point, not a guarantee.
+
 ## Protects against
 
 - Accidental recursive deletion of large or system-critical directory trees (`safe_delete` + `pathGuard` + `blastRadius`)
