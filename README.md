@@ -125,7 +125,7 @@ Guardian MCP는 표준 MCP stdio 서버예요. `mcpServers` 설정 형식은 Cla
 - **`restore_trash({ id })`** — quarantine에서 원래 위치로 복구
 - **`purge_trash({ ids?, olderThanDays?, dryRun?, confirm? })`** — quarantine 영구 삭제 (기본은 아무것도 안 지움)
 
-### 왜 클라이언트 설정이 꼭 필요한가
+### 왜 클라이언트 설정이 꼭 필요한가?
 
 MCP 서버는 새 도구를 **추가**할 뿐, 클라이언트에 이미 있는 원본 도구(예: Bash)를 막지는 못해요. 즉 Guardian MCP만 설치해도 에이전트가 원래 도구로 `rm -rf`를 직접 실행할 길은 여전히 열려 있어요.
 
