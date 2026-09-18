@@ -1,5 +1,5 @@
-import fs from "node:fs";
 import { classifyDelete } from "../guards/classify.js";
+import { lexists } from "../guards/fsUtil.js";
 import { moveToQuarantine } from "./quarantine.js";
 
 export interface SafeDeleteInput {
@@ -15,7 +15,7 @@ export interface SafeDeleteResult {
 export function safeDelete(input: SafeDeleteInput): SafeDeleteResult {
   const { path: targetPath, confirm = false } = input;
 
-  if (!fs.existsSync(targetPath)) {
+  if (!lexists(targetPath)) {
     return { ok: false, message: `Path does not exist: ${targetPath}` };
   }
 
@@ -28,6 +28,9 @@ export function safeDelete(input: SafeDeleteInput): SafeDeleteResult {
     return { ok: false, message: `CONFIRMATION REQUIRED: ${verdict.reasons.join(" ")}` };
   }
 
-  const quarantined = moveToQuarantine(targetPath);
-  return { ok: true, message: `Moved to quarantine (recoverable): ${quarantined}` };
+  const record = moveToQuarantine(targetPath, "delete");
+  return {
+    ok: true,
+    message: `Moved to quarantine (recoverable, id=${record.id}): ${record.quarantinedPath}. Use restore_trash to undo.`,
+  };
 }

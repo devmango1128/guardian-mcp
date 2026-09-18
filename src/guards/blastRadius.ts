@@ -1,11 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
 import { allow, confirm, type ClassifyResult } from "./types.js";
+import { lexists } from "./fsUtil.js";
 
 export interface BlastRadius {
   fileCount: number;
   totalBytes: number;
   truncated: boolean;
+  errors: string[];
 }
 
 const DEFAULT_MAX_FILES = 100;
@@ -25,6 +27,7 @@ export function measureBlastRadius(targetPath: string, limits: { maxFiles: numbe
   let fileCount = 0;
   let totalBytes = 0;
   let truncated = false;
+  const errors: string[] = [];
 
   const stack: string[] = [targetPath];
   while (stack.length > 0) {
@@ -36,7 +39,8 @@ export function measureBlastRadius(targetPath: string, limits: { maxFiles: numbe
     let stat: fs.Stats;
     try {
       stat = fs.lstatSync(current);
-    } catch {
+    } catch (err) {
+      errors.push(`Could not stat "${current}": ${(err as Error).message}`);
       continue;
     }
 
@@ -44,7 +48,8 @@ export function measureBlastRadius(targetPath: string, limits: { maxFiles: numbe
       let entries: string[] = [];
       try {
         entries = fs.readdirSync(current);
-      } catch {
+      } catch (err) {
+        errors.push(`Could not list "${current}": ${(err as Error).message}`);
         continue;
       }
       for (const entry of entries) stack.push(path.join(current, entry));
@@ -54,22 +59,32 @@ export function measureBlastRadius(targetPath: string, limits: { maxFiles: numbe
     }
   }
 
-  return { fileCount, totalBytes, truncated };
+  return { fileCount, totalBytes, truncated, errors };
 }
 
 export function classifyBlastRadius(targetPath: string): ClassifyResult {
-  if (!fs.existsSync(targetPath)) return allow();
+  if (!lexists(targetPath)) return allow();
 
   const limits = { maxFiles: maxFiles(), maxBytes: maxBytes() };
   const radius = measureBlastRadius(targetPath, limits);
 
-  if (radius.fileCount > limits.maxFiles || radius.totalBytes > limits.maxBytes || radius.truncated) {
-    return confirm(
-      `Target affects ${radius.fileCount}${radius.truncated ? "+" : ""} file(s) / ` +
-        `${(radius.totalBytes / 1_000_000).toFixed(1)}${radius.truncated ? "+" : ""}MB, ` +
-        `above the configured threshold (${limits.maxFiles} files / ${(limits.maxBytes / 1_000_000).toFixed(0)}MB). ` +
-        `Re-run with confirm:true to proceed.`,
+  const overThreshold = radius.fileCount > limits.maxFiles || radius.totalBytes > limits.maxBytes || radius.truncated;
+  const hadErrors = radius.errors.length > 0;
+
+  if (!overThreshold && !hadErrors) return allow();
+
+  const parts: string[] = [];
+  if (overThreshold) {
+    parts.push(
+      `affects ${radius.fileCount}${radius.truncated ? "+" : ""} file(s) / ` +
+        `${(radius.totalBytes / 1_000_000).toFixed(1)}${radius.truncated ? "+" : ""}MB ` +
+        `(threshold ${limits.maxFiles} files / ${(limits.maxBytes / 1_000_000).toFixed(0)}MB)`,
     );
   }
-  return allow();
+  if (hadErrors) {
+    const shown = radius.errors.slice(0, 3).join("; ");
+    parts.push(`could not fully measure the target (${radius.errors.length} error(s): ${shown}${radius.errors.length > 3 ? "; ..." : ""})`);
+  }
+
+  return confirm(`Target ${parts.join(" and ")}. Re-run with confirm:true to proceed.`);
 }

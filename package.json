@@ -1,10 +1,10 @@
 {
-  "name": "guardian-mcp",
-  "version": "0.1.0",
-  "description": "MCP server that intercepts destructive filesystem operations (delete/overwrite) before an AI agent can run them, blocking system-critical paths and oversized blast-radius operations.",
+  "name": "safe-agent-mcp",
+  "version": "0.2.0",
+  "description": "MCP server that provides a recoverable safety layer against destructive filesystem operations and commands run by AI coding agents.",
   "type": "module",
   "bin": {
-    "guardian-mcp": "./dist/index.js"
+    "safe-agent-mcp": "./dist/index.js"
   },
   "main": "./dist/index.js",
   "files": [

@@ -14,11 +14,14 @@ export interface SafeExecuteResult {
 const TIMEOUT_MS = 30_000;
 
 export function safeExecute(input: SafeExecuteInput): SafeExecuteResult {
-  const { command } = input;
+  const { command, confirm = false } = input;
   const verdict = classifyExecute(command);
 
   if (verdict.verdict === "block") {
     return { ok: false, message: `BLOCKED: ${verdict.reasons.join(" ")}` };
+  }
+  if (verdict.verdict === "confirm" && !confirm) {
+    return { ok: false, message: `CONFIRMATION REQUIRED: ${verdict.reasons.join(" ")}` };
   }
 
   try {

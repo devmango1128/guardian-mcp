@@ -3,21 +3,27 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { safeDelete } from "../src/tools/safeDelete.js";
+import { listQuarantine } from "../src/tools/quarantine.js";
 
-describe("safeDelete (integration, isolated temp dir only)", () => {
+describe("safeDelete (integration, isolated temp dirs only)", () => {
   let tmpDir: string;
+  let trashDir: string;
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "guardian-delete-"));
+    trashDir = fs.mkdtempSync(path.join(os.tmpdir(), "guardian-delete-trash-"));
+    process.env.GUARDIAN_TRASH_DIR = trashDir;
   });
 
   afterEach(() => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
+    fs.rmSync(trashDir, { recursive: true, force: true });
+    delete process.env.GUARDIAN_TRASH_DIR;
     delete process.env.GUARDIAN_PROTECTED_PATHS;
     delete process.env.GUARDIAN_MAX_FILES;
   });
 
-  it("moves a normal file to quarantine instead of deleting it", () => {
+  it("moves a normal file to quarantine instead of deleting it, and it's discoverable via list_trash", () => {
     const file = path.join(tmpDir, "throwaway.txt");
     fs.writeFileSync(file, "bye");
 
@@ -25,10 +31,7 @@ describe("safeDelete (integration, isolated temp dir only)", () => {
 
     expect(result.ok).toBe(true);
     expect(fs.existsSync(file)).toBe(false);
-    const quarantineDir = path.join(os.homedir(), ".guardian-mcp", "trash");
-    const recovered = fs.readdirSync(quarantineDir).find((f) => f.endsWith("throwaway.txt"));
-    expect(recovered).toBeDefined();
-    if (recovered) fs.rmSync(path.join(quarantineDir, recovered), { force: true });
+    expect(listQuarantine().some((r) => r.originalPath === file)).toBe(true);
   });
 
   it("refuses to delete a missing path", () => {
@@ -62,5 +65,16 @@ describe("safeDelete (integration, isolated temp dir only)", () => {
     const second = safeDelete({ path: tmpDir, confirm: true });
     expect(second.ok).toBe(true);
     expect(fs.existsSync(tmpDir)).toBe(false);
+  });
+
+  it("can target a dangling symlink even though it doesn't 'exist' by stat-following rules", () => {
+    const link = path.join(tmpDir, "dangling");
+    try {
+      fs.symlinkSync(path.join(tmpDir, "nowhere"), link, "file");
+    } catch {
+      return;
+    }
+    const result = safeDelete({ path: link });
+    expect(result.ok).toBe(true);
   });
 });
